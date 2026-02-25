@@ -572,16 +572,30 @@ async function initProfile() {
     });
 
     // Attach click listeners to all delete buttons
+    // Attach click listeners to all delete buttons
     document.querySelectorAll('.delete-btn').forEach(btn => {
       btn.addEventListener('click', async (e) => {
-        e.preventDefault(); // This stops the browser from clicking the video link underneath!
+        e.preventDefault(); 
         
         const videoId = e.currentTarget.getAttribute('data-id');
         if(confirm("Are you sure you want to permanently delete this video?")) {
           try {
-            // Delete the document from Firestore
+            // 1. Get the video data before deleting it to see how many likes it had
+            const vidDoc = await getDoc(doc(db, "videos", videoId));
+            let likesToDeduct = 0;
+            if (vidDoc.exists()) {
+              likesToDeduct = vidDoc.data().likes || 0;
+            }
+
+            // 2. Deduct the points (10) and the total likes from the user's profile
+            await updateDoc(doc(db, "users", currentUser.uid), {
+              points: increment(-10),
+              totalLikes: increment(-likesToDeduct)
+            });
+
+            // 3. Delete the video from Firestore
             await deleteDoc(doc(db, "videos", videoId));
-            console.log("Video deleted from database.");
+            console.log("Video deleted and stats adjusted.");
           } catch (error) {
             console.error("Error deleting video:", error);
             alert("Failed to delete video. Check console for details.");
@@ -611,6 +625,7 @@ function sanitize(str) {
 
 
 // === 7. SINGLE VIDEO PAGE LOGIC ===
+// === 7. SINGLE VIDEO PAGE LOGIC ===
 async function initSingleVideo() {
   const urlParams = new URLSearchParams(window.location.search);
   const videoId = urlParams.get('id');
@@ -627,23 +642,64 @@ async function initSingleVideo() {
   const vidData = videoSnap.data();
   
   // Populate UI
-  document.getElementById('main-video').src = vidData.videoURL;
+  const mainVid = document.getElementById('main-video');
+  mainVid.src = vidData.videoURL;
   document.getElementById('video-author').innerText = "@" + sanitize(vidData.username);
   document.getElementById('video-like-count').innerText = vidData.likes || 0;
 
   // Video Click to Play/Pause
-  const mainVid = document.getElementById('main-video');
   mainVid.addEventListener('click', () => {
     mainVid.paused ? mainVid.play() : mainVid.pause();
   });
 
-  // Setup Video Like
-  setupLikeSystem(videoId, vidData.userId); // Reuse existing like logic
-  // Map the sidebar heart icon to trigger the hidden like logic
-  document.getElementById('video-like-btn').addEventListener('click', () => {
-    document.getElementById(`like-${videoId}`).click();
-    const isLiked = document.getElementById(`like-${videoId}`).classList.contains('liked');
-    document.getElementById('video-like-btn').querySelector('.icon').innerText = isLiked ? '❤️' : '🤍';
+  // Audio Mute/Unmute Toggle
+  const muteBtn = document.getElementById('mute-btn');
+  const muteIcon = document.getElementById('mute-icon');
+  muteBtn.addEventListener('click', () => {
+    mainVid.muted = !mainVid.muted;
+    muteIcon.innerText = mainVid.muted ? '🔇' : '🔊';
+  });
+
+  // Dedicated Like Logic for Single Video Page (Fixes the console errors!)
+  const likeBtn = document.getElementById('video-like-btn');
+  const likeRef = doc(db, `videos/${videoId}/likes`, currentUser.uid);
+
+  getDoc(likeRef).then(snap => {
+    if(snap.exists()) {
+      likeBtn.classList.add('liked');
+      likeBtn.querySelector('.icon').innerText = '❤️';
+    }
+  });
+
+  likeBtn.addEventListener('click', async () => {
+    const isLiked = likeBtn.classList.contains('liked');
+    const ownerRef = doc(db, "users", vidData.userId);
+
+    try {
+      await runTransaction(db, async (transaction) => {
+        const vidDoc = await transaction.get(videoRef);
+        const ownerDoc = await transaction.get(ownerRef);
+        
+        const currentLikes = vidDoc.data().likes || 0;
+        const currentTotalLikes = ownerDoc.data().totalLikes || 0;
+
+        transaction.update(videoRef, { likes: isLiked ? currentLikes - 1 : currentLikes + 1 });
+        transaction.update(ownerRef, { totalLikes: isLiked ? currentTotalLikes - 1 : currentTotalLikes + 1 });
+        
+        if (isLiked) {
+          transaction.delete(likeRef);
+        } else {
+          transaction.set(likeRef, { timestamp: serverTimestamp() });
+        }
+      });
+      
+      likeBtn.classList.toggle('liked');
+      likeBtn.querySelector('.icon').innerText = isLiked ? '🤍' : '❤️';
+      const countSpan = document.getElementById('video-like-count');
+      countSpan.innerText = isLiked ? parseInt(countSpan.innerText) - 1 : parseInt(countSpan.innerText) + 1;
+    } catch (e) {
+      console.error("Like transaction failed", e);
+    }
   });
 
   // Share API Setup
@@ -656,7 +712,6 @@ async function initSingleVideo() {
         });
       } catch (err) { console.log("Share cancelled or failed.", err); }
     } else {
-      // Fallback for desktop
       navigator.clipboard.writeText(window.location.href);
       alert("Link copied to clipboard!");
     }
@@ -667,7 +722,7 @@ async function initSingleVideo() {
   document.getElementById('open-comments-btn').addEventListener('click', () => sheet.classList.remove('hidden'));
   document.getElementById('close-comments-btn').addEventListener('click', () => sheet.classList.add('hidden'));
 
-  // Setup Advanced Comments (Replies & Likes)
+  // Setup Advanced Comments
   initAdvancedComments(videoId);
 }
 
