@@ -5,9 +5,9 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { 
   collection, doc, setDoc, getDoc, addDoc, updateDoc, onSnapshot, 
-  query, orderBy, limit, serverTimestamp, runTransaction, getDocs, where 
+  query, orderBy, limit, serverTimestamp, runTransaction, getDocs, where,
+  deleteDoc // <--- ADD THIS
 } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-
 // === GLOBAL STATE ===
 let currentUser = null;
 let currentChallengeId = null;
@@ -337,18 +337,32 @@ function setupCommentSystem(videoId) {
   });
 
   // Post comment
+  // Post comment (UPDATED WITH SAFETY CHECK)
   postBtn.addEventListener('click', async () => {
     const text = input.value.trim();
     if(!text) return;
     input.value = '';
 
-    const userDoc = await getDoc(doc(db, "users", currentUser.uid));
-    await addDoc(collection(db, `videos/${videoId}/comments`), {
-      userId: currentUser.uid,
-      username: userDoc.data().username,
-      text: text,
-      createdAt: serverTimestamp()
-    });
+    try {
+      const userDocRef = doc(db, "users", currentUser.uid);
+      const userDoc = await getDoc(userDocRef);
+      
+      // Fallback to email prefix if username isn't found
+      let authorName = currentUser.email ? currentUser.email.split('@')[0] : "User";
+      
+      if (userDoc.exists() && userDoc.data().username) {
+        authorName = userDoc.data().username;
+      }
+
+      await addDoc(collection(db, `videos/${videoId}/comments`), {
+        userId: currentUser.uid,
+        username: authorName,
+        text: text,
+        createdAt: serverTimestamp()
+      });
+    } catch (error) {
+      console.error("Error posting comment:", error);
+    }
   });
 }
 
@@ -371,13 +385,21 @@ async function initProfile() {
   document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
 
   // User Stats
+  // User Stats (UPDATED WITH FALLBACK)
   onSnapshot(doc(db, "users", currentUser.uid), (docSnap) => {
     if(docSnap.exists()) {
       const data = docSnap.data();
-      document.getElementById('profile-username').innerText = data.username;
-      document.getElementById('stat-points').innerText = data.points;
-      document.getElementById('stat-streak').innerText = data.streak;
-      document.getElementById('stat-likes').innerText = data.totalLikes;
+      document.getElementById('profile-username').innerText = data.username || "Unknown User";
+      document.getElementById('stat-points').innerText = data.points || 0;
+      document.getElementById('stat-streak').innerText = data.streak || 0;
+      document.getElementById('stat-likes').innerText = data.totalLikes || 0;
+    } else {
+      // Fallback if the user document is missing in Firestore
+      const fallbackName = currentUser.email ? currentUser.email.split('@')[0] : "User";
+      document.getElementById('profile-username').innerText = fallbackName;
+      document.getElementById('stat-points').innerText = "0";
+      document.getElementById('stat-streak').innerText = "0";
+      document.getElementById('stat-likes').innerText = "0";
     }
   });
 
@@ -393,7 +415,17 @@ async function initProfile() {
     });
   });
 }
-
+// === DELETE VIDEO LOGIC ===
+async function deleteVideo(videoId) {
+  try {
+    // Deletes the video document from Firestore
+    await deleteDoc(doc(db, "videos", videoId));
+    console.log("Video removed from feed.");
+  } catch (error) {
+    console.error("Error deleting video:", error);
+    alert("Failed to delete video. Please try again.");
+  }
+}
 // Utility: Sanitize inputs for security
 function sanitize(str) {
   const temp = document.createElement('div');
