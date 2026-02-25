@@ -5,8 +5,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { 
   collection, doc, setDoc, getDoc, addDoc, updateDoc, onSnapshot, 
-  query, orderBy, limit, serverTimestamp, runTransaction, getDocs, where,
-  deleteDoc // <--- ADD THIS
+  query, orderBy, limit, serverTimestamp, runTransaction, getDocs, where, deleteDoc,
+  increment // <--- ADD THIS
 } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 // === GLOBAL STATE ===
 let currentUser = null;
@@ -35,9 +35,9 @@ function routeApp() {
   if (document.getElementById('feed-container')) initFeed();
   if (document.getElementById('profile-container')) initProfile();
   if (document.getElementById('single-video-container')) initSingleVideo();
-  if (document.getElementById('rewards-container')) initRewards(); // <-- ADD THIS
+  if (document.getElementById('rewards-container')) initRewards();
+  if (document.getElementById('public-profile-container')) initPublicProfile(); // <-- ADD THIS
 }
-
 // === 1. LOGIN / SIGNUP LOGIC ===
 if (document.getElementById('auth-container')) {
   let isSignup = false;
@@ -259,6 +259,7 @@ async function saveVideoToFirestore(url) {
 // === 4. FEED & ENGAGEMENT LOGIC ===
 // === 4. FEED & ENGAGEMENT LOGIC (MODERNIZED) ===
 // === 4. FEED & ENGAGEMENT LOGIC (LINKED TO DEDICATED PAGE) ===
+// === 4. FEED & ENGAGEMENT LOGIC (LINKED TO DEDICATED PAGE & PUBLIC PROFILE) ===
 function listenToFeed() {
   const q = query(collection(db, "videos"), orderBy("createdAt", "desc"));
   onSnapshot(q, (snapshot) => {
@@ -274,10 +275,11 @@ function listenToFeed() {
       const card = document.createElement('div');
       card.className = 'card video-card';
       
-      // We wrap the video in the <a> tag so clicking it navigates to video.html
       card.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <h4 style="margin: 0;">${sanitize(vid.username)}</h4>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <a href="public-profile.html?id=${vid.userId}" style="margin: 0; font-size: 16px; font-weight: bold; color: white; text-decoration: none;">
+            ${sanitize(vid.username)}
+          </a>
         </div>
         
         <a href="video.html?id=${vidId}" style="display: block; text-decoration: none;">
@@ -298,11 +300,11 @@ function listenToFeed() {
       `;
       feed.appendChild(card);
 
-      // We still want people to be able to like videos directly from the home feed!
-      setupLikeSystem(vidId, vid.userId);
       // Tell the Intersection Observer to watch this specific video
       const newVideoElement = document.getElementById(`vid-${vidId}`);
-      if (newVideoElement) feedVideoObserver.observe(newVideoElement);
+      if (newVideoElement && typeof feedVideoObserver !== 'undefined') feedVideoObserver.observe(newVideoElement);
+
+      setupLikeSystem(vidId, vid.userId);
     });
   });
 }
@@ -393,6 +395,7 @@ function setupCommentSystem(videoId) {
 
 // === 5. LEADERBOARD ===
 // === 5. LEADERBOARD (MODERNIZED) ===
+// === 5. LEADERBOARD (MODERNIZED & LINKED TO PROFILES) ===
 function listenToLeaderboard() {
   const leaderboardSection = document.getElementById('leaderboard-section');
   if(leaderboardSection) leaderboardSection.classList.remove('hidden');
@@ -410,10 +413,12 @@ function listenToLeaderboard() {
     let rank = 1;
     snap.forEach(docSnap => {
       const u = docSnap.data();
+      const userId = docSnap.id; // We need this ID for the link!
       
       // Determine Medals & Classes
       let medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `<span style="color:#aaa;">${rank}.</span>`;
       let rankClass = rank <= 3 ? `rank-${rank}` : '';
+      
       let username = u.username || (u.email ? u.email.split('@')[0] : 'User');
       let badgesHtml = (u.badges || []).map(b => b.split(" ")[0]).join(""); // Extract the emojis
       
@@ -421,7 +426,9 @@ function listenToLeaderboard() {
         <li class="leaderboard-item ${rankClass}">
           <div class="leaderboard-user">
             <span style="width: 25px; text-align: center; display: inline-block;">${medal}</span>
-            <span>${sanitize(username)} ${badgesHtml}</span>
+            <a href="public-profile.html?id=${userId}" style="text-decoration: none; color: white;">
+              ${sanitize(username)} ${badgesHtml}
+            </a>
           </div>
           <span class="leaderboard-likes">${u.totalLikes || 0} ❤️</span>
         </li>
@@ -737,3 +744,99 @@ const feedVideoObserver = new IntersectionObserver((entries) => {
   rootMargin: "0px",
   threshold: 0.6 // 60% of the video must be visible to trigger play
 });
+
+
+// === 10. PUBLIC PROFILE & FOLLOW SYSTEM ===
+async function initPublicProfile() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const targetUserId = urlParams.get('id');
+
+  // If they click their own profile link, redirect to their personal profile
+  if (!targetUserId || targetUserId === currentUser.uid) {
+    return window.location.href = 'profile.html';
+  }
+
+  const targetUserRef = doc(db, "users", targetUserId);
+  const followBtn = document.getElementById('follow-btn');
+  const followDocRef = doc(db, `users/${targetUserId}/followers`, currentUser.uid);
+  const myFollowingDocRef = doc(db, `users/${currentUser.uid}/following`, targetUserId);
+
+  // 1. Load User Stats & Badges
+  onSnapshot(targetUserRef, (docSnap) => {
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      const badgesHtml = (data.badges || []).map(b => b.split(" ")[0]).join("");
+      
+      document.getElementById('public-username').innerText = (data.username || "User") + " " + badgesHtml;
+      document.getElementById('public-followers').innerText = data.followersCount || 0;
+      document.getElementById('public-following').innerText = data.followingCount || 0;
+      document.getElementById('public-likes').innerText = data.totalLikes || 0;
+    } else {
+      alert("User not found!");
+      window.location.href = 'index.html';
+    }
+  });
+
+  // 2. Load User Videos
+  const q = query(collection(db, "videos"), where("userId", "==", targetUserId));
+  onSnapshot(q, (snap) => {
+    const grid = document.getElementById('public-video-grid');
+    grid.innerHTML = '';
+    document.getElementById('public-videos-count').innerText = snap.size;
+    
+    snap.forEach(docSnap => {
+      const vid = docSnap.data();
+      const vidId = docSnap.id;
+      grid.innerHTML += `
+        <a href="video.html?id=${vidId}">
+          <video src="${vid.videoURL}#t=0.1" preload="metadata" style="width: 100%; height: 120px; object-fit: cover; border-radius: 4px;"></video>
+        </a>
+      `;
+    });
+  });
+
+  // 3. Check Initial Follow Status
+  getDoc(followDocRef).then(snap => {
+    if (snap.exists()) {
+      followBtn.innerText = "Following";
+      followBtn.style.background = "#555"; // Make it look grayed out
+      followBtn.classList.add('is-following');
+    }
+  });
+
+  // 4. Handle Follow/Unfollow Clicks
+  followBtn.addEventListener('click', async () => {
+    followBtn.disabled = true;
+    const isFollowing = followBtn.classList.contains('is-following');
+    const myUserRef = doc(db, "users", currentUser.uid);
+
+    try {
+      if (isFollowing) {
+        // UNFOLLOW LOGIC
+        await deleteDoc(followDocRef);
+        await deleteDoc(myFollowingDocRef);
+        await updateDoc(targetUserRef, { followersCount: increment(-1) });
+        await updateDoc(myUserRef, { followingCount: increment(-1) });
+        
+        followBtn.innerText = "Follow";
+        followBtn.style.background = "var(--primary-color)";
+        followBtn.classList.remove('is-following');
+      } else {
+        // FOLLOW LOGIC
+        await setDoc(followDocRef, { timestamp: serverTimestamp() });
+        await setDoc(myFollowingDocRef, { timestamp: serverTimestamp() });
+        await updateDoc(targetUserRef, { followersCount: increment(1) });
+        await updateDoc(myUserRef, { followingCount: increment(1) });
+        
+        followBtn.innerText = "Following";
+        followBtn.style.background = "#555";
+        followBtn.classList.add('is-following');
+      }
+    } catch (error) {
+      console.error("Error updating follow status:", error);
+      alert("Something went wrong.");
+    } finally {
+      followBtn.disabled = false;
+    }
+  });
+}

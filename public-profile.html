@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Creator Profile - ChallengeHub</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div class="container" id="public-profile-container">
+    <a href="javascript:history.back()" style="display: inline-block; margin-bottom: 15px; color: var(--primary-color); font-weight: bold;">⬅ Back</a>
+    
+    <div class="card" style="text-align: center;">
+      <h2 id="public-username">Loading...</h2>
+      <button id="follow-btn" class="btn" style="width: auto; padding: 8px 25px; margin-top: 10px; border-radius: 20px;">Follow</button>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-box">
+        <h3 id="public-followers">0</h3>
+        <p>Followers</p>
+      </div>
+      <div class="stat-box">
+        <h3 id="public-following">0</h3>
+        <p>Following</p>
+      </div>
+      <div class="stat-box">
+        <h3 id="public-likes">0</h3>
+        <p>Total Likes</p>
+      </div>
+      <div class="stat-box">
+        <h3 id="public-videos-count">0</h3>
+        <p>Videos</p>
+      </div>
+    </div>
+
+    <h3 style="margin-top: 15px; margin-bottom: 10px;">Submissions</h3>
+    <div class="video-grid" id="public-video-grid"></div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="index.html" class="nav-item">🏠 Home</a>
+    <a href="rewards.html" class="nav-item">🏆 Rewards</a>
+    <a href="profile.html" class="nav-item">👤 Profile</a>
+  </nav>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
