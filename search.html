@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Search - ChallengeHub</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div class="container" id="search-container">
+    
+    <div class="card" style="position: sticky; top: 10px; z-index: 100; padding: 10px;">
+      <input type="text" id="search-input" placeholder="🔍 Search for users..." style="margin-bottom: 0; border-radius: 20px; font-size: 16px; border: 2px solid var(--primary-color);">
+    </div>
+    
+    <div id="search-results" style="margin-top: 15px;">
+      <p style="text-align: center; color: var(--text-muted); margin-top: 40px;">Type a username to start searching.</p>
+    </div>
+
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="index.html" class="nav-item">🏠 Home</a>
+    <a href="search.html" class="nav-item active">🔍 Search</a>
+    <a href="rewards.html" class="nav-item">🏆 Rewards</a>
+    <a href="profile.html" class="nav-item">👤 Profile</a>
+  </nav>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

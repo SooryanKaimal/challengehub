@@ -36,7 +36,8 @@ function routeApp() {
   if (document.getElementById('profile-container')) initProfile();
   if (document.getElementById('single-video-container')) initSingleVideo();
   if (document.getElementById('rewards-container')) initRewards();
-  if (document.getElementById('public-profile-container')) initPublicProfile(); // <-- ADD THIS
+  if (document.getElementById('public-profile-container')) initPublicProfile();
+  if (document.getElementById('search-container')) initSearch(); // <-- ADD THIS
 }
 // === 1. LOGIN / SIGNUP LOGIC ===
 if (document.getElementById('auth-container')) {
@@ -885,6 +886,71 @@ async function initPublicProfile() {
       alert("Something went wrong.");
     } finally {
       followBtn.disabled = false;
+    }
+  });
+}
+
+// === 11. SEARCH SYSTEM ===
+function initSearch() {
+  const searchInput = document.getElementById('search-input');
+  const resultsContainer = document.getElementById('search-results');
+
+  // Listen for every keystroke the user types
+  searchInput.addEventListener('input', async (e) => {
+    const searchTerm = e.target.value.trim();
+    
+    // If the box is empty, reset the screen
+    if (searchTerm.length < 1) {
+      resultsContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); margin-top: 40px;">Type a username to start searching.</p>';
+      return;
+    }
+
+    try {
+      // The Firestore trick for "startsWith" string matching
+      const q = query(
+        collection(db, "users"),
+        where("username", ">=", searchTerm),
+        where("username", "<=", searchTerm + '\uf8ff'),
+        limit(10)
+      );
+
+      const snapshot = await getDocs(q);
+      
+      if (snapshot.empty) {
+        resultsContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); margin-top: 40px;">No users found.</p>';
+        return;
+      }
+
+      // Clear the loading text and display the users
+      resultsContainer.innerHTML = '';
+      
+      snapshot.forEach(docSnap => {
+        const u = docSnap.data();
+        const userId = docSnap.id;
+        
+        // Hide the current user from their own search results
+        if (userId === currentUser.uid) return;
+
+        // Grab any badges the user has bought
+        const badgesHtml = (u.badges || []).map(b => b.split(" ")[0]).join("");
+        
+        const userCard = document.createElement('div');
+        userCard.className = 'card';
+        userCard.style.padding = '12px 15px';
+        userCard.style.marginBottom = '10px';
+        
+        // Make the entire card a clickable link to their public profile
+        userCard.innerHTML = `
+          <a href="public-profile.html?id=${userId}" style="display: flex; justify-content: space-between; align-items: center; text-decoration: none; color: white;">
+            <span style="font-weight: bold; font-size: 16px;">${sanitize(u.username)} ${badgesHtml}</span>
+            <span style="color: var(--text-muted); font-size: 14px;">${u.followersCount || 0} Followers</span>
+          </a>
+        `;
+        resultsContainer.appendChild(userCard);
+      });
+
+    } catch (error) {
+      console.error("Search error:", error);
     }
   });
 }
