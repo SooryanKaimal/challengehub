@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Watch - ChallengeHub</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body style="padding-bottom: 0; background: #000;">
+  
+  <a href="index.html" class="back-btn">⬅ Back</a>
+
+  <div class="single-video-container" id="single-video-container">
+    <video id="main-video" playsinline loop autoplay></video>
+    
+    <div class="tiktok-sidebar">
+      <div class="action-item" id="video-like-btn">
+        <span class="icon">🤍</span>
+        <span class="count" id="video-like-count">0</span>
+      </div>
+      <div class="action-item" id="open-comments-btn">
+        <span class="icon">💬</span>
+        <span class="count" id="video-comment-count">0</span>
+      </div>
+      <div class="action-item" id="share-btn">
+        <span class="icon">↗️</span>
+        <span>Share</span>
+      </div>
+    </div>
+
+    <div class="video-info-bottom">
+      <h3 id="video-author">@username</h3>
+      <p id="video-challenge-title">#DailyChallenge</p>
+    </div>
+  </div>
+
+  <div id="comments-sheet" class="bottom-sheet hidden">
+    <div class="sheet-header">
+      <h4>Comments</h4>
+      <button id="close-comments-btn">✕</button>
+    </div>
+    
+    <div class="sheet-body" id="sheet-comments-list">
+      </div>
+
+    <div class="sheet-footer">
+      <div id="replying-indicator" class="hidden">Replying to <span id="replying-to-name"></span> <button id="cancel-reply-btn">✕</button></div>
+      <div style="display: flex; gap: 10px;">
+        <input type="text" id="sheet-comment-input" placeholder="Add a comment...">
+        <button class="btn" id="sheet-post-comment" style="width: auto; padding: 0 20px;">Post</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

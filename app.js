@@ -34,6 +34,7 @@ onAuthStateChanged(auth, (user) => {
 function routeApp() {
   if (document.getElementById('feed-container')) initFeed();
   if (document.getElementById('profile-container')) initProfile();
+  if (document.getElementById('single-video-container')) initSingleVideo(); // <-- ADD THIS
 }
 
 // === 1. LOGIN / SIGNUP LOGIC ===
@@ -101,21 +102,29 @@ async function initFeed() {
 }
 
 // Auto-create or fetch Daily Challenge
+// Auto-create or fetch Daily Challenge with Randomized Topics
 async function setupDailyChallenge() {
   const challengeRef = doc(db, "challenges", "daily");
   const docSnap = await getDoc(challengeRef);
   const now = new Date();
 
   if (!docSnap.exists() || docSnap.data().expiresAt.toDate() < now) {
-    // Generate new challenge
-    const newChallenge = {
-      title: "Daily Challenge: Tell a Joke",
-      description: "Record your best 30-second joke!",
-      expiresAt: new Date(now.getTime() + 24 * 60 * 60 * 1000) // 24h from now
-    };
-    await setDoc(challengeRef, newChallenge);
-    currentChallengeId = "daily_" + now.getTime(); // Pseudo ID for logic tracking
-    renderChallenge(newChallenge);
+    // Array of possible challenges
+    const challengeList = [
+      { title: "Daily Challenge: Tell a Joke", description: "Record your best 30-second joke!" },
+      { title: "Daily Challenge: Dance Off", description: "Show us your best dance move!" },
+      { title: "Daily Challenge: Life Hack", description: "Share a useful life hack in 30 seconds." },
+      { title: "Daily Challenge: Lip Sync", description: "Lip sync to your favorite song snippet!" },
+      { title: "Daily Challenge: Hidden Talent", description: "What's a weird talent you have?" }
+    ];
+    
+    // Pick a random challenge from the list
+    const randomChallenge = challengeList[Math.floor(Math.random() * challengeList.length)];
+    randomChallenge.expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24h from now
+
+    await setDoc(challengeRef, randomChallenge);
+    currentChallengeId = "daily_" + now.getTime(); 
+    renderChallenge(randomChallenge);
   } else {
     currentChallengeId = "daily"; 
     renderChallenge(docSnap.data());
@@ -248,10 +257,13 @@ async function saveVideoToFirestore(url) {
 
 // === 4. FEED & ENGAGEMENT LOGIC ===
 // === 4. FEED & ENGAGEMENT LOGIC (MODERNIZED) ===
+// === 4. FEED & ENGAGEMENT LOGIC (LINKED TO DEDICATED PAGE) ===
 function listenToFeed() {
   const q = query(collection(db, "videos"), orderBy("createdAt", "desc"));
   onSnapshot(q, (snapshot) => {
     const feed = document.getElementById('video-feed');
+    if (!feed) return; // Safety check
+    
     feed.innerHTML = '';
     
     snapshot.forEach((docSnap) => {
@@ -261,50 +273,32 @@ function listenToFeed() {
       const card = document.createElement('div');
       card.className = 'card video-card';
       
-      // Modern Video Player HTML structure
+      // We wrap the video in the <a> tag so clicking it navigates to video.html
       card.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <h4 style="margin: 0;">${sanitize(vid.username)}</h4>
         </div>
         
-        <div class="video-wrapper">
-          <video id="vid-${vidId}" src="${vid.videoURL}" playsinline preload="metadata" loop></video>
-          <div class="play-overlay" id="overlay-${vidId}">
-            <div class="play-btn-icon"><div class="play-triangle"></div></div>
+        <a href="video.html?id=${vidId}" style="display: block; text-decoration: none;">
+          <div class="video-wrapper">
+            <video id="vid-${vidId}" src="${vid.videoURL}#t=0.1" playsinline preload="metadata" muted></video>
+            <div class="play-overlay">
+              <div class="play-btn-icon"><div class="play-triangle"></div></div>
+            </div>
           </div>
-        </div>
+        </a>
 
         <div class="video-actions">
           <button class="like-btn" id="like-${vidId}">❤️ <span id="like-count-${vidId}">${vid.likes || 0}</span></button>
-        </div>
-        
-        <div class="comment-section">
-          <div id="comments-${vidId}" style="max-height: 120px; overflow-y: auto; margin-bottom: 10px;"></div>
-          <div style="display:flex; gap:5px;">
-            <input type="text" id="comment-input-${vidId}" placeholder="Add a comment..." style="margin:0;">
-            <button class="btn" id="post-comment-${vidId}" style="width: auto;">Post</button>
-          </div>
+          <a href="video.html?id=${vidId}" style="color: var(--primary-color); font-size: 14px; text-decoration: none; display: flex; align-items: center; gap: 5px;">
+            💬 View Video
+          </a>
         </div>
       `;
       feed.appendChild(card);
 
-      // Custom Play/Pause Click Logic
-      const videoEl = document.getElementById(`vid-${vidId}`);
-      const overlay = document.getElementById(`overlay-${vidId}`);
-      
-      videoEl.addEventListener('click', () => {
-        if (videoEl.paused) {
-          videoEl.play();
-          overlay.classList.add('hidden');
-        } else {
-          videoEl.pause();
-          overlay.classList.remove('hidden');
-        }
-      });
-
-      // Attach Event Listeners for Engagement
+      // We still want people to be able to like videos directly from the home feed!
       setupLikeSystem(vidId, vid.userId);
-      setupCommentSystem(vidId);
     });
   });
 }
@@ -483,4 +477,171 @@ function sanitize(str) {
   const temp = document.createElement('div');
   temp.textContent = str;
   return temp.innerHTML;
+}
+
+
+// === 7. SINGLE VIDEO PAGE LOGIC ===
+async function initSingleVideo() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const videoId = urlParams.get('id');
+  if (!videoId) return window.location.href = 'index.html';
+
+  const videoRef = doc(db, "videos", videoId);
+  const videoSnap = await getDoc(videoRef);
+  
+  if (!videoSnap.exists()) {
+    alert("Video not found!");
+    return window.location.href = 'index.html';
+  }
+
+  const vidData = videoSnap.data();
+  
+  // Populate UI
+  document.getElementById('main-video').src = vidData.videoURL;
+  document.getElementById('video-author').innerText = "@" + sanitize(vidData.username);
+  document.getElementById('video-like-count').innerText = vidData.likes || 0;
+
+  // Video Click to Play/Pause
+  const mainVid = document.getElementById('main-video');
+  mainVid.addEventListener('click', () => {
+    mainVid.paused ? mainVid.play() : mainVid.pause();
+  });
+
+  // Setup Video Like
+  setupLikeSystem(videoId, vidData.userId); // Reuse existing like logic
+  // Map the sidebar heart icon to trigger the hidden like logic
+  document.getElementById('video-like-btn').addEventListener('click', () => {
+    document.getElementById(`like-${videoId}`).click();
+    const isLiked = document.getElementById(`like-${videoId}`).classList.contains('liked');
+    document.getElementById('video-like-btn').querySelector('.icon').innerText = isLiked ? '❤️' : '🤍';
+  });
+
+  // Share API Setup
+  document.getElementById('share-btn').addEventListener('click', async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Check out this video by ${vidData.username} on ChallengeHub!`,
+          url: window.location.href
+        });
+      } catch (err) { console.log("Share cancelled or failed.", err); }
+    } else {
+      // Fallback for desktop
+      navigator.clipboard.writeText(window.location.href);
+      alert("Link copied to clipboard!");
+    }
+  });
+
+  // Comments Bottom Sheet Toggle
+  const sheet = document.getElementById('comments-sheet');
+  document.getElementById('open-comments-btn').addEventListener('click', () => sheet.classList.remove('hidden'));
+  document.getElementById('close-comments-btn').addEventListener('click', () => sheet.classList.add('hidden'));
+
+  // Setup Advanced Comments (Replies & Likes)
+  initAdvancedComments(videoId);
+}
+
+function initAdvancedComments(videoId) {
+  let replyingToId = null; 
+  let replyingToName = "";
+
+  const list = document.getElementById('sheet-comments-list');
+  const input = document.getElementById('sheet-comment-input');
+  const postBtn = document.getElementById('sheet-post-comment');
+  const indicator = document.getElementById('replying-indicator');
+
+  // Real-time listener for Comments
+  const q = query(collection(db, `videos/${videoId}/comments`), orderBy("createdAt", "asc"));
+  onSnapshot(q, (snap) => {
+    list.innerHTML = '';
+    document.getElementById('video-comment-count').innerText = snap.size;
+
+    const comments = [];
+    snap.forEach(d => comments.push({ id: d.id, ...d.data() }));
+
+    // Separate Top-level and Replies
+    const topLevel = comments.filter(c => !c.parentId);
+    const replies = comments.filter(c => c.parentId);
+
+    topLevel.forEach(c => {
+      // Create top level comment HTML
+      const div = document.createElement('div');
+      div.className = 'single-comment';
+      div.innerHTML = `
+        <div class="comment-top">
+          <span class="comment-author">@${sanitize(c.username)}</span>
+          <span class="like-comment-btn" data-cid="${c.id}">🤍 ${c.likes || 0}</span>
+        </div>
+        <div class="comment-text">${sanitize(c.text)}</div>
+        <div class="comment-actions">
+          <span class="reply-btn" data-cid="${c.id}" data-cname="${c.username}">Reply</span>
+        </div>
+        <div class="reply-block" id="replies-to-${c.id}"></div>
+      `;
+      list.appendChild(div);
+
+      // Append its replies
+      const specificReplies = replies.filter(r => r.parentId === c.id);
+      const replyContainer = div.querySelector(`#replies-to-${c.id}`);
+      specificReplies.forEach(r => {
+        replyContainer.innerHTML += `
+          <div class="single-comment" style="margin-bottom: 10px;">
+            <div class="comment-top"><span class="comment-author">@${sanitize(r.username)}</span></div>
+            <div class="comment-text">${sanitize(r.text)}</div>
+          </div>
+        `;
+      });
+    });
+
+    // Attach Comment Like Listeners
+    document.querySelectorAll('.like-comment-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const cid = e.target.getAttribute('data-cid');
+        const cRef = doc(db, `videos/${videoId}/comments`, cid);
+        const cSnap = await getDoc(cRef);
+        await updateDoc(cRef, { likes: (cSnap.data().likes || 0) + 1 });
+      });
+    });
+
+    // Attach Reply Listeners
+    document.querySelectorAll('.reply-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        replyingToId = e.target.getAttribute('data-cid');
+        replyingToName = e.target.getAttribute('data-cname');
+        indicator.classList.remove('hidden');
+        document.getElementById('replying-to-name').innerText = "@" + replyingToName;
+        input.focus();
+      });
+    });
+  });
+
+  // Cancel Reply
+  document.getElementById('cancel-reply-btn').addEventListener('click', () => {
+    replyingToId = null;
+    indicator.classList.add('hidden');
+  });
+
+  // Post Comment / Reply
+  postBtn.addEventListener('click', async () => {
+    const text = input.value.trim();
+    if(!text) return;
+    input.value = '';
+
+    const uname = localStorage.getItem('ch_username') || (currentUser.email ? currentUser.email.split('@')[0] : "User");
+
+    const payload = {
+      userId: currentUser.uid,
+      username: uname,
+      text: text,
+      likes: 0,
+      createdAt: serverTimestamp(),
+      parentId: replyingToId // Null if it's a top-level comment, has an ID if it's a reply
+    };
+
+    await addDoc(collection(db, `videos/${videoId}/comments`), payload);
+    
+    // Reset reply state
+    replyingToId = null;
+    indicator.classList.add('hidden');
+  });
 }

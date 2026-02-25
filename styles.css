@@ -146,3 +146,34 @@ input, textarea {
 .rank-3 { border-left: 4px solid #cd7f32; } /* Bronze */
 .leaderboard-user { display: flex; align-items: center; gap: 12px; }
 .leaderboard-likes { color: var(--primary-color); font-size: 1.1em; }
+
+/* --- TIKTOK STYLE SINGLE VIDEO PAGE --- */
+.back-btn { position: fixed; top: 20px; left: 20px; color: white; z-index: 1000; font-weight: bold; text-shadow: 1px 1px 3px rgba(0,0,0,0.8); }
+.single-video-container { position: fixed; inset: 0; background: #000; display: flex; align-items: center; justify-content: center; }
+.single-video-container video { width: 100%; height: 100%; object-fit: cover; }
+
+.tiktok-sidebar { position: absolute; right: 15px; bottom: 100px; display: flex; flex-direction: column; gap: 20px; align-items: center; z-index: 100; }
+.action-item { display: flex; flex-direction: column; align-items: center; color: white; text-shadow: 1px 1px 3px rgba(0,0,0,0.8); cursor: pointer; }
+.action-item .icon { font-size: 32px; filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.5)); transition: transform 0.2s; }
+.action-item:active .icon { transform: scale(0.9); }
+.action-item.liked .icon { color: var(--primary-color); }
+
+.video-info-bottom { position: absolute; bottom: 30px; left: 15px; color: white; z-index: 100; text-shadow: 1px 1px 3px rgba(0,0,0,0.8); max-width: 80%; }
+.video-info-bottom h3 { margin-bottom: 5px; font-size: 18px; }
+
+/* --- COMMENTS BOTTOM SHEET --- */
+.bottom-sheet { position: fixed; bottom: 0; left: 0; right: 0; height: 60vh; background: var(--surface-color); border-top-left-radius: 20px; border-top-right-radius: 20px; z-index: 2000; display: flex; flex-direction: column; transform: translateY(0); transition: transform 0.3s ease-in-out; box-shadow: 0 -5px 20px rgba(0,0,0,0.5); }
+.bottom-sheet.hidden { transform: translateY(100%); display: flex !important; /* Keep display to allow animation */ }
+.sheet-header { display: flex; justify-content: space-between; padding: 15px 20px; border-bottom: 1px solid #333; font-weight: bold; }
+.sheet-header button { background: none; color: white; font-size: 18px; }
+.sheet-body { flex: 1; overflow-y: auto; padding: 15px 20px; display: flex; flex-direction: column; gap: 15px; }
+.sheet-footer { padding: 15px 20px; border-top: 1px solid #333; background: var(--surface-color); }
+
+.single-comment { display: flex; flex-direction: column; gap: 5px; }
+.comment-top { display: flex; justify-content: space-between; }
+.comment-author { font-weight: bold; color: var(--text-muted); font-size: 14px; }
+.comment-text { font-size: 15px; }
+.comment-actions { display: flex; gap: 15px; font-size: 12px; color: var(--text-muted); margin-top: 5px; }
+.comment-actions span { cursor: pointer; }
+.reply-block { margin-left: 20px; border-left: 2px solid #333; padding-left: 10px; margin-top: 10px; }
+#replying-indicator { font-size: 12px; color: var(--primary-color); margin-bottom: 5px; }
