@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rewards - ChallengeHub</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div class="container" id="rewards-container">
+    <div class="challenge-banner" style="background: linear-gradient(135deg, #f1c40f, #f39c12);">
+      <h2>🏆 Reward Store</h2>
+      <p>Spend your points on exclusive profile badges!</p>
+      <h3 style="margin-top: 10px;">Your Points: <span id="store-user-points">0</span></h3>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-box">
+        <h1 style="font-size: 40px; margin-bottom: 10px;">🌟</h1>
+        <h3>Rising Star</h3>
+        <p style="color: #f1c40f; font-weight: bold;">50 Points</p>
+        <button class="btn purchase-btn" data-badge="🌟 Rising Star" data-cost="50" style="margin-top: 10px; padding: 8px;">Buy</button>
+      </div>
+
+      <div class="stat-box">
+        <h1 style="font-size: 40px; margin-bottom: 10px;">🔥</h1>
+        <h3>Streak Master</h3>
+        <p style="color: #f1c40f; font-weight: bold;">150 Points</p>
+        <button class="btn purchase-btn" data-badge="🔥 Streak Master" data-cost="150" style="margin-top: 10px; padding: 8px;">Buy</button>
+      </div>
+
+      <div class="stat-box">
+        <h1 style="font-size: 40px; margin-bottom: 10px;">👑</h1>
+        <h3>Comedy King</h3>
+        <p style="color: #f1c40f; font-weight: bold;">300 Points</p>
+        <button class="btn purchase-btn" data-badge="👑 Comedy King" data-cost="300" style="margin-top: 10px; padding: 8px;">Buy</button>
+      </div>
+
+      <div class="stat-box">
+        <h1 style="font-size: 40px; margin-bottom: 10px;">✅</h1>
+        <h3>Verified</h3>
+        <p style="color: #f1c40f; font-weight: bold;">1000 Points</p>
+        <button class="btn purchase-btn" data-badge="✅ Verified" data-cost="1000" style="margin-top: 10px; padding: 8px;">Buy</button>
+      </div>
+    </div>
+    
+    <div class="card" style="margin-top: 20px;">
+      <h3>My Badges</h3>
+      <div id="my-badges-list" style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 10px;">
+        </div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="index.html" class="nav-item">🏠 Home</a>
+    <a href="rewards.html" class="nav-item active">🏆 Rewards</a>
+    <a href="profile.html" class="nav-item">👤 Profile</a>
+  </nav>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

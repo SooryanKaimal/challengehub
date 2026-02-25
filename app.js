@@ -34,7 +34,8 @@ onAuthStateChanged(auth, (user) => {
 function routeApp() {
   if (document.getElementById('feed-container')) initFeed();
   if (document.getElementById('profile-container')) initProfile();
-  if (document.getElementById('single-video-container')) initSingleVideo(); // <-- ADD THIS
+  if (document.getElementById('single-video-container')) initSingleVideo();
+  if (document.getElementById('rewards-container')) initRewards(); // <-- ADD THIS
 }
 
 // === 1. LOGIN / SIGNUP LOGIC ===
@@ -435,7 +436,8 @@ async function initProfile() {
   onSnapshot(doc(db, "users", currentUser.uid), (docSnap) => {
     if(docSnap.exists()) {
       const data = docSnap.data();
-      document.getElementById('profile-username').innerText = data.username || "Unknown User";
+      const badgesHtml = (data.badges || []).map(b => b.split(" ")[0]).join(""); // Extracts just the emoji from the badge name
+      document.getElementById('profile-username').innerText = (data.username || "Unknown User") + " " + badgesHtml;
       document.getElementById('stat-points').innerText = data.points || 0;
       document.getElementById('stat-streak').innerText = data.streak || 0;
       document.getElementById('stat-likes').innerText = data.totalLikes || 0;
@@ -643,5 +645,73 @@ function initAdvancedComments(videoId) {
     // Reset reply state
     replyingToId = null;
     indicator.classList.add('hidden');
+  });
+}
+
+// === 8. REWARDS STORE LOGIC ===
+function initRewards() {
+  const userRef = doc(db, "users", currentUser.uid);
+
+  // 1. Listen for user's current points and badges
+  onSnapshot(userRef, (docSnap) => {
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      const points = data.points || 0;
+      const badges = data.badges || [];
+
+      // Update UI
+      document.getElementById('store-user-points').innerText = points;
+      
+      const badgesContainer = document.getElementById('my-badges-list');
+      badgesContainer.innerHTML = badges.length > 0 
+        ? badges.map(b => `<span style="background: #333; padding: 5px 10px; border-radius: 20px; font-size: 14px;">${b}</span>`).join('')
+        : "<p style='color: #aaa;'>You don't own any badges yet.</p>";
+    }
+  });
+
+  // 2. Handle Purchasing
+  document.querySelectorAll('.purchase-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const badgeName = e.target.getAttribute('data-badge');
+      const cost = parseInt(e.target.getAttribute('data-cost'));
+
+      const userDoc = await getDoc(userRef);
+      if (!userDoc.exists()) return;
+      
+      const data = userDoc.data();
+      const currentPoints = data.points || 0;
+      const currentBadges = data.badges || [];
+
+      // Check if they already own it
+      if (currentBadges.includes(badgeName)) {
+        return alert("You already own this badge!");
+      }
+
+      // Check if they can afford it
+      if (currentPoints < cost) {
+        return alert(`Not enough points! You need ${cost - currentPoints} more points to buy this.`);
+      }
+
+      // Confirm purchase
+      if (confirm(`Buy "${badgeName}" for ${cost} points?`)) {
+        try {
+          e.target.disabled = true;
+          e.target.innerText = "Buying...";
+
+          await updateDoc(userRef, {
+            points: currentPoints - cost,
+            badges: [...currentBadges, badgeName] // Add the new badge to their array
+          });
+
+          alert("Purchase successful! The badge has been added to your profile.");
+        } catch (error) {
+          console.error("Purchase failed:", error);
+          alert("Something went wrong. Please try again.");
+        } finally {
+          e.target.disabled = false;
+          e.target.innerText = "Buy";
+        }
+      }
+    });
   });
 }
