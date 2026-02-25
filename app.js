@@ -854,6 +854,7 @@ async function initPublicProfile() {
   });
 
   // 4. Handle Follow/Unfollow Clicks
+  // 4. Handle Follow/Unfollow Clicks (UPDATED WITH SAFETY MERGE)
   followBtn.addEventListener('click', async () => {
     followBtn.disabled = true;
     const isFollowing = followBtn.classList.contains('is-following');
@@ -864,8 +865,10 @@ async function initPublicProfile() {
         // UNFOLLOW LOGIC
         await deleteDoc(followDocRef);
         await deleteDoc(myFollowingDocRef);
-        await updateDoc(targetUserRef, { followersCount: increment(-1) });
-        await updateDoc(myUserRef, { followingCount: increment(-1) });
+        
+        // Use setDoc with merge: true so it doesn't crash if the document is missing
+        await setDoc(targetUserRef, { followersCount: increment(-1) }, { merge: true });
+        await setDoc(myUserRef, { followingCount: increment(-1) }, { merge: true });
         
         followBtn.innerText = "Follow";
         followBtn.style.background = "var(--primary-color)";
@@ -874,8 +877,10 @@ async function initPublicProfile() {
         // FOLLOW LOGIC
         await setDoc(followDocRef, { timestamp: serverTimestamp() });
         await setDoc(myFollowingDocRef, { timestamp: serverTimestamp() });
-        await updateDoc(targetUserRef, { followersCount: increment(1) });
-        await updateDoc(myUserRef, { followingCount: increment(1) });
+        
+        // Use setDoc with merge: true so it doesn't crash if the document is missing
+        await setDoc(targetUserRef, { followersCount: increment(1) }, { merge: true });
+        await setDoc(myUserRef, { followingCount: increment(1) }, { merge: true });
         
         followBtn.innerText = "Following";
         followBtn.style.background = "#555";
@@ -888,7 +893,6 @@ async function initPublicProfile() {
       followBtn.disabled = false;
     }
   });
-}
 
 // === 11. SEARCH SYSTEM ===
 function initSearch() {
@@ -953,4 +957,5 @@ function initSearch() {
       console.error("Search error:", error);
     }
   });
+}
 }
