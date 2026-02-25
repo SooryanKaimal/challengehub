@@ -488,42 +488,56 @@ function listenToLeaderboard() {
 }
 
 // === 6. PROFILE PAGE ===
+// === 6. PROFILE PAGE ===
 async function initProfile() {
   document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
+
   // Edit Profile Name Logic
-  document.getElementById('edit-profile-btn').addEventListener('click', async () => {
-    const newName = prompt("Enter your new username:");
-    
-    if (newName && newName.trim().length > 0) {
-      try {
-        // We use setDoc with merge: true so we don't accidentally delete their points!
-        await setDoc(doc(db, "users", currentUser.uid), {
-          username: newName.trim()
-        }, { merge: true });
-        
-        // Update local storage so the screen updates instantly without refreshing
-        localStorage.setItem('ch_username', newName.trim());
-        document.getElementById('profile-username').innerText = newName.trim();
-        
-        alert("Profile name updated successfully!");
-      } catch (error) {
-        console.error("Error updating profile:", error);
-        alert("Failed to update profile name.");
+  const editBtn = document.getElementById('edit-profile-btn');
+  if(editBtn) {
+    editBtn.addEventListener('click', async () => {
+      const newName = prompt("Enter your new username:");
+      if (newName && newName.trim().length > 0) {
+        try {
+          await setDoc(doc(db, "users", currentUser.uid), { username: newName.trim() }, { merge: true });
+          localStorage.setItem('ch_username', newName.trim());
+          document.getElementById('profile-username').innerText = newName.trim();
+          alert("Profile name updated successfully!");
+        } catch (error) {
+          alert("Failed to update profile name.");
+        }
       }
-    }
-  });
-  // User Stats
-  // User Stats (UPDATED WITH FALLBACK)
+    });
+  }
+
+  // User Stats (WITH LOCAL CACHING)
+  const cachedName = localStorage.getItem('ch_username');
+  if (cachedName) {
+    document.getElementById('profile-username').innerText = cachedName;
+    document.getElementById('stat-points').innerText = localStorage.getItem('ch_points') || "0";
+    document.getElementById('stat-streak').innerText = localStorage.getItem('ch_streak') || "0";
+    document.getElementById('stat-likes').innerText = localStorage.getItem('ch_likes') || "0";
+  }
+
   onSnapshot(doc(db, "users", currentUser.uid), (docSnap) => {
     if(docSnap.exists()) {
       const data = docSnap.data();
-      const badgesHtml = (data.badges || []).map(b => b.split(" ")[0]).join(""); // Extracts just the emoji from the badge name
-      document.getElementById('profile-username').innerText = (data.username || "Unknown User") + " " + badgesHtml;
-      document.getElementById('stat-points').innerText = data.points || 0;
-      document.getElementById('stat-streak').innerText = data.streak || 0;
-      document.getElementById('stat-likes').innerText = data.totalLikes || 0;
+      const uname = data.username || "Unknown User";
+      const pts = data.points || 0;
+      const streak = data.streak || 0;
+      const likes = data.totalLikes || 0;
+      const badgesHtml = (data.badges || []).map(b => b.split(" ")[0]).join("");
+
+      document.getElementById('profile-username').innerText = uname + " " + badgesHtml;
+      document.getElementById('stat-points').innerText = pts;
+      document.getElementById('stat-streak').innerText = streak;
+      document.getElementById('stat-likes').innerText = likes;
+
+      localStorage.setItem('ch_username', uname);
+      localStorage.setItem('ch_points', pts);
+      localStorage.setItem('ch_streak', streak);
+      localStorage.setItem('ch_likes', likes);
     } else {
-      // Fallback if the user document is missing in Firestore
       const fallbackName = currentUser.email ? currentUser.email.split('@')[0] : "User";
       document.getElementById('profile-username').innerText = fallbackName;
       document.getElementById('stat-points').innerText = "0";
@@ -532,15 +546,48 @@ async function initProfile() {
     }
   });
 
-  // User Videos
+  // User Videos (UPDATED WITH DELETE BUTTON OVERLAY)
   const q = query(collection(db, "videos"), where("userId", "==", currentUser.uid));
   onSnapshot(q, (snap) => {
     const grid = document.getElementById('user-video-grid');
+    if (!grid) return;
     grid.innerHTML = '';
     document.getElementById('stat-videos').innerText = snap.size;
+
     snap.forEach(docSnap => {
       const vid = docSnap.data();
-      grid.innerHTML += `<video src="${vid.videoURL}#t=0.1" preload="metadata"></video>`;
+      const vidId = docSnap.id;
+
+      // Create a container to hold the video link AND the delete button
+      const container = document.createElement('div');
+      container.style.position = 'relative';
+
+      container.innerHTML = `
+        <a href="video.html?id=${vidId}">
+          <video src="${vid.videoURL}#t=0.1" preload="metadata" style="width: 100%; height: 120px; object-fit: cover; border-radius: 4px; display: block;"></video>
+        </a>
+        <button class="delete-btn" data-id="${vidId}" style="position: absolute; top: 5px; right: 5px; background: rgba(255, 47, 47, 0.9); color: white; border: none; border-radius: 50%; width: 26px; height: 26px; cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 14px; box-shadow: 0 2px 5px rgba(0,0,0,0.5);">🗑️</button>
+      `;
+      grid.appendChild(container);
+    });
+
+    // Attach click listeners to all delete buttons
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.preventDefault(); // This stops the browser from clicking the video link underneath!
+        
+        const videoId = e.currentTarget.getAttribute('data-id');
+        if(confirm("Are you sure you want to permanently delete this video?")) {
+          try {
+            // Delete the document from Firestore
+            await deleteDoc(doc(db, "videos", videoId));
+            console.log("Video deleted from database.");
+          } catch (error) {
+            console.error("Error deleting video:", error);
+            alert("Failed to delete video. Check console for details.");
+          }
+        }
+      });
     });
   });
 }
