@@ -282,7 +282,7 @@ function listenToFeed() {
         
         <a href="video.html?id=${vidId}" style="display: block; text-decoration: none;">
           <div class="video-wrapper">
-            <video id="vid-${vidId}" src="${vid.videoURL}#t=0.1" playsinline preload="metadata" muted></video>
+            <video id="vid-${vidId}" src="${vid.videoURL}#t=0.1" playsinline preload="metadata" muted loop></video>
             <div class="play-overlay">
               <div class="play-btn-icon"><div class="play-triangle"></div></div>
             </div>
@@ -300,6 +300,9 @@ function listenToFeed() {
 
       // We still want people to be able to like videos directly from the home feed!
       setupLikeSystem(vidId, vid.userId);
+      // Tell the Intersection Observer to watch this specific video
+      const newVideoElement = document.getElementById(`vid-${vidId}`);
+      if (newVideoElement) feedVideoObserver.observe(newVideoElement);
     });
   });
 }
@@ -412,12 +415,13 @@ function listenToLeaderboard() {
       let medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `<span style="color:#aaa;">${rank}.</span>`;
       let rankClass = rank <= 3 ? `rank-${rank}` : '';
       let username = u.username || (u.email ? u.email.split('@')[0] : 'User');
+      let badgesHtml = (u.badges || []).map(b => b.split(" ")[0]).join(""); // Extract the emojis
       
       list.innerHTML += `
         <li class="leaderboard-item ${rankClass}">
           <div class="leaderboard-user">
             <span style="width: 25px; text-align: center; display: inline-block;">${medal}</span>
-            <span>${sanitize(username)}</span>
+            <span>${sanitize(username)} ${badgesHtml}</span>
           </div>
           <span class="leaderboard-likes">${u.totalLikes || 0} ❤️</span>
         </li>
@@ -715,3 +719,21 @@ function initRewards() {
     });
   });
 }
+
+// === 9. PERFORMANCE: INTERSECTION OBSERVER ===
+// Watches videos on the screen and only plays the ones currently in view
+const feedVideoObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    const video = entry.target;
+    if (entry.isIntersecting) {
+      // Video is on screen - play it silently
+      video.play().catch(err => console.log("Autoplay prevented by browser:", err));
+    } else {
+      // Video scrolled off screen - pause it to save battery/memory
+      video.pause();
+    }
+  });
+}, {
+  rootMargin: "0px",
+  threshold: 0.6 // 60% of the video must be visible to trigger play
+});
