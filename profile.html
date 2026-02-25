@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile - ChallengeHub</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div class="container" id="profile-container">
+    <div class="card" style="text-align: center;">
+      <h2 id="profile-username">Loading...</h2>
+      <button id="logout-btn" style="background: transparent; color: var(--primary-color); margin-top: 10px;">Logout</button>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-box">
+        <h3 id="stat-points">0</h3>
+        <p>Points</p>
+      </div>
+      <div class="stat-box">
+        <h3 id="stat-streak">0</h3>
+        <p>Day Streak</p>
+      </div>
+      <div class="stat-box">
+        <h3 id="stat-likes">0</h3>
+        <p>Total Likes</p>
+      </div>
+      <div class="stat-box">
+        <h3 id="stat-videos">0</h3>
+        <p>Videos</p>
+      </div>
+    </div>
+
+    <h3>My Submissions</h3>
+    <div class="video-grid" id="user-video-grid" style="margin-top: 15px;"></div>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="index.html" class="nav-item">🏠 Home</a>
+    <a href="profile.html" class="nav-item active">👤 Profile</a>
+  </nav>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

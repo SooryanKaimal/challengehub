@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feed - ChallengeHub</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div class="container" id="feed-container">
+    <div class="challenge-banner" id="daily-challenge">
+      <h3>Loading Challenge...</h3>
+    </div>
+
+    <div class="card hidden" id="leaderboard-section">
+      <h3>🏆 Top 10 Creators</h3>
+      <ol id="leaderboard-list" style="margin-left: 20px; margin-top: 10px;"></ol>
+    </div>
+
+    <button class="btn" id="open-upload-btn" style="margin-bottom: 20px;">+ Submit to Daily Challenge</button>
+
+    <div id="video-feed"></div>
+  </div>
+
+  <div id="upload-modal" class="hidden">
+    <button class="close-modal" id="close-upload-btn">✕</button>
+    <h2 style="margin-bottom: 20px; text-align:center;">Upload Video</h2>
+    <input type="file" id="video-file" accept="video/*">
+    <button class="btn" id="submit-video-btn">Upload (Max 30s / 50MB)</button>
+    <p id="upload-progress" style="text-align: center; margin-top: 15px;"></p>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="index.html" class="nav-item active">🏠 Home</a>
+    <a href="profile.html" class="nav-item">👤 Profile</a>
+  </nav>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
