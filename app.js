@@ -247,25 +247,39 @@ async function saveVideoToFirestore(url) {
 }
 
 // === 4. FEED & ENGAGEMENT LOGIC ===
+// === 4. FEED & ENGAGEMENT LOGIC (MODERNIZED) ===
 function listenToFeed() {
   const q = query(collection(db, "videos"), orderBy("createdAt", "desc"));
   onSnapshot(q, (snapshot) => {
     const feed = document.getElementById('video-feed');
     feed.innerHTML = '';
+    
     snapshot.forEach((docSnap) => {
       const vid = docSnap.data();
       const vidId = docSnap.id;
       
       const card = document.createElement('div');
       card.className = 'card video-card';
+      
+      // Modern Video Player HTML structure
       card.innerHTML = `
-        <h4>${sanitize(vid.username)}</h4>
-        <video src="${vid.videoURL}" controls playsinline preload="metadata"></video>
-        <div class="video-actions">
-          <button class="like-btn" id="like-${vidId}">❤️ <span id="like-count-${vidId}">${vid.likes}</span></button>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h4 style="margin: 0;">${sanitize(vid.username)}</h4>
         </div>
+        
+        <div class="video-wrapper">
+          <video id="vid-${vidId}" src="${vid.videoURL}" playsinline preload="metadata" loop></video>
+          <div class="play-overlay" id="overlay-${vidId}">
+            <div class="play-btn-icon"><div class="play-triangle"></div></div>
+          </div>
+        </div>
+
+        <div class="video-actions">
+          <button class="like-btn" id="like-${vidId}">❤️ <span id="like-count-${vidId}">${vid.likes || 0}</span></button>
+        </div>
+        
         <div class="comment-section">
-          <div id="comments-${vidId}" style="max-height: 100px; overflow-y: auto; margin-bottom: 10px;"></div>
+          <div id="comments-${vidId}" style="max-height: 120px; overflow-y: auto; margin-bottom: 10px;"></div>
           <div style="display:flex; gap:5px;">
             <input type="text" id="comment-input-${vidId}" placeholder="Add a comment..." style="margin:0;">
             <button class="btn" id="post-comment-${vidId}" style="width: auto;">Post</button>
@@ -274,13 +288,26 @@ function listenToFeed() {
       `;
       feed.appendChild(card);
 
+      // Custom Play/Pause Click Logic
+      const videoEl = document.getElementById(`vid-${vidId}`);
+      const overlay = document.getElementById(`overlay-${vidId}`);
+      
+      videoEl.addEventListener('click', () => {
+        if (videoEl.paused) {
+          videoEl.play();
+          overlay.classList.add('hidden');
+        } else {
+          videoEl.pause();
+          overlay.classList.remove('hidden');
+        }
+      });
+
       // Attach Event Listeners for Engagement
       setupLikeSystem(vidId, vid.userId);
       setupCommentSystem(vidId);
     });
   });
 }
-
 // Transactional Like System & Auto-creating likes subcollection
 async function setupLikeSystem(videoId, videoOwnerId) {
   const likeBtn = document.getElementById(`like-${videoId}`);
@@ -367,15 +394,40 @@ function setupCommentSystem(videoId) {
 }
 
 // === 5. LEADERBOARD ===
+// === 5. LEADERBOARD (MODERNIZED) ===
 function listenToLeaderboard() {
-  document.getElementById('leaderboard-section').classList.remove('hidden');
+  const leaderboardSection = document.getElementById('leaderboard-section');
+  if(leaderboardSection) leaderboardSection.classList.remove('hidden');
+  
+  // Get top 10 users ordered by total likes
   const q = query(collection(db, "users"), orderBy("totalLikes", "desc"), limit(10));
+  
   onSnapshot(q, (snap) => {
     const list = document.getElementById('leaderboard-list');
+    if (!list) return; // Safety check
+    
     list.innerHTML = '';
+    list.className = 'leaderboard-list'; // Apply our new CSS class
+    
+    let rank = 1;
     snap.forEach(docSnap => {
       const u = docSnap.data();
-      list.innerHTML += `<li>${sanitize(u.username)} - ${u.totalLikes} ❤️</li>`;
+      
+      // Determine Medals & Classes
+      let medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `<span style="color:#aaa;">${rank}.</span>`;
+      let rankClass = rank <= 3 ? `rank-${rank}` : '';
+      let username = u.username || (u.email ? u.email.split('@')[0] : 'User');
+      
+      list.innerHTML += `
+        <li class="leaderboard-item ${rankClass}">
+          <div class="leaderboard-user">
+            <span style="width: 25px; text-align: center; display: inline-block;">${medal}</span>
+            <span>${sanitize(username)}</span>
+          </div>
+          <span class="leaderboard-likes">${u.totalLikes || 0} ❤️</span>
+        </li>
+      `;
+      rank++;
     });
   });
 }
