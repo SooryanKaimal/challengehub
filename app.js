@@ -490,7 +490,28 @@ function listenToLeaderboard() {
 // === 6. PROFILE PAGE ===
 async function initProfile() {
   document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
-
+  // Edit Profile Name Logic
+  document.getElementById('edit-profile-btn').addEventListener('click', async () => {
+    const newName = prompt("Enter your new username:");
+    
+    if (newName && newName.trim().length > 0) {
+      try {
+        // We use setDoc with merge: true so we don't accidentally delete their points!
+        await setDoc(doc(db, "users", currentUser.uid), {
+          username: newName.trim()
+        }, { merge: true });
+        
+        // Update local storage so the screen updates instantly without refreshing
+        localStorage.setItem('ch_username', newName.trim());
+        document.getElementById('profile-username').innerText = newName.trim();
+        
+        alert("Profile name updated successfully!");
+      } catch (error) {
+        console.error("Error updating profile:", error);
+        alert("Failed to update profile name.");
+      }
+    }
+  });
   // User Stats
   // User Stats (UPDATED WITH FALLBACK)
   onSnapshot(doc(db, "users", currentUser.uid), (docSnap) => {
