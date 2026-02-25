@@ -893,6 +893,8 @@ async function initPublicProfile() {
       followBtn.disabled = false;
     }
   });
+}
+
 
 // === 11. SEARCH SYSTEM ===
 function initSearch() {
@@ -957,5 +959,4 @@ function initSearch() {
       console.error("Search error:", error);
     }
   });
-}
 }
