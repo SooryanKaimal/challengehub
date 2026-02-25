@@ -260,18 +260,63 @@ async function saveVideoToFirestore(url) {
 // === 4. FEED & ENGAGEMENT LOGIC (MODERNIZED) ===
 // === 4. FEED & ENGAGEMENT LOGIC (LINKED TO DEDICATED PAGE) ===
 // === 4. FEED & ENGAGEMENT LOGIC (LINKED TO DEDICATED PAGE & PUBLIC PROFILE) ===
-function listenToFeed() {
+// === 4. FEED & ENGAGEMENT LOGIC (WITH FOLLOWING FILTER) ===
+let currentFeedMode = 'global'; 
+let myFollowingList = new Set(); 
+
+async function listenToFeed() {
+  // Set up the toggle buttons
+  const btnGlobal = document.getElementById('btn-global-feed');
+  const btnFollowing = document.getElementById('btn-following-feed');
+
+  // If buttons don't exist yet, just render the normal feed
+  if (!btnGlobal || !btnFollowing) {
+    return renderFeed();
+  }
+
+  btnGlobal.addEventListener('click', () => {
+    currentFeedMode = 'global';
+    btnGlobal.classList.add('active');
+    btnFollowing.classList.remove('active');
+    renderFeed(); 
+  });
+
+  btnFollowing.addEventListener('click', async () => {
+    currentFeedMode = 'following';
+    btnFollowing.classList.add('active');
+    btnGlobal.classList.remove('active');
+    
+    // Fetch the list of people I follow
+    const followingSnap = await getDocs(collection(db, `users/${currentUser.uid}/following`));
+    myFollowingList.clear();
+    followingSnap.forEach(doc => myFollowingList.add(doc.id));
+    
+    renderFeed(); 
+  });
+
+  renderFeed(); 
+}
+
+function renderFeed() {
   const q = query(collection(db, "videos"), orderBy("createdAt", "desc"));
+  
   onSnapshot(q, (snapshot) => {
     const feed = document.getElementById('video-feed');
-    if (!feed) return; // Safety check
-    
+    if (!feed) return;
     feed.innerHTML = '';
     
+    let videosShown = 0;
+
     snapshot.forEach((docSnap) => {
       const vid = docSnap.data();
       const vidId = docSnap.id;
       
+      // FILTER: If on "following" tab, skip videos from users I don't follow
+      if (currentFeedMode === 'following' && !myFollowingList.has(vid.userId)) {
+        return; 
+      }
+      
+      videosShown++;
       const card = document.createElement('div');
       card.className = 'card video-card';
       
@@ -300,12 +345,15 @@ function listenToFeed() {
       `;
       feed.appendChild(card);
 
-      // Tell the Intersection Observer to watch this specific video
       const newVideoElement = document.getElementById(`vid-${vidId}`);
       if (newVideoElement && typeof feedVideoObserver !== 'undefined') feedVideoObserver.observe(newVideoElement);
 
       setupLikeSystem(vidId, vid.userId);
     });
+
+    if (videosShown === 0 && currentFeedMode === 'following') {
+      feed.innerHTML = `<p style="text-align: center; color: #aaa; margin-top: 20px;">You aren't following anyone yet! Go check out the Global feed to find creators.</p>`;
+    }
   });
 }
 // Transactional Like System & Auto-creating likes subcollection

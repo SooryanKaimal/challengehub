@@ -177,3 +177,30 @@ input, textarea {
 .comment-actions span { cursor: pointer; }
 .reply-block { margin-left: 20px; border-left: 2px solid #333; padding-left: 10px; margin-top: 10px; }
 #replying-indicator { font-size: 12px; color: var(--primary-color); margin-bottom: 5px; }
+
+/* --- FEED TOGGLE --- */
+.feed-toggle {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  background: var(--surface-color);
+  padding: 5px;
+  border-radius: 25px;
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
+}
+.toggle-btn {
+  background: transparent;
+  color: var(--text-muted);
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+.toggle-btn.active {
+  background: var(--primary-color);
+  color: white;
+}
