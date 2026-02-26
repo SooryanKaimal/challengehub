@@ -502,7 +502,7 @@ async function initProfile() {
           await setDoc(doc(db, "users", currentUser.uid), { username: newName.trim() }, { merge: true });
           localStorage.setItem('ch_username', newName.trim());
           document.getElementById('profile-username').innerText = newName.trim();
-          alert("Profile name updated successfully!");
+          showToast("✅ Profile name updated!");
         } catch (error) {
           alert("Failed to update profile name.");
         }
@@ -713,7 +713,7 @@ async function initSingleVideo() {
       } catch (err) { console.log("Share cancelled or failed.", err); }
     } else {
       navigator.clipboard.writeText(window.location.href);
-      alert("Link copied to clipboard!");
+      showToast("🔗 Link copied to clipboard!");
     }
   });
 
@@ -886,7 +886,7 @@ function initRewards() {
             badges: [...currentBadges, badgeName] // Add the new badge to their array
           });
 
-          alert("Purchase successful! The badge has been added to your profile.");
+          showToast("🎉 Badge purchased successfully!");
         } catch (error) {
           console.error("Purchase failed:", error);
           alert("Something went wrong. Please try again.");
@@ -1083,3 +1083,30 @@ function initSearch() {
     }
   });
 }
+
+// === 12. TOAST NOTIFICATION SYSTEM ===
+function showToast(message, type = 'success') {
+  // 1. Create the container if it doesn't exist yet
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    document.body.appendChild(container);
+  }
+
+  // 2. Create the toast element
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.innerText = message;
+  
+  // 3. Add it to the screen
+  container.appendChild(toast);
+
+  // 4. Clean it up from the DOM after 3 seconds so it doesn't clutter memory
+  setTimeout(() => {
+    toast.remove();
+  }, 3000);
+}
+
+// Make it available globally
+window.showToast = showToast;

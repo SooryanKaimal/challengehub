@@ -204,3 +204,42 @@ input, textarea {
   background: var(--primary-color);
   color: white;
 }
+
+/* --- TOAST NOTIFICATIONS --- */
+#toast-container {
+  position: fixed;
+  bottom: 90px; /* Sits perfectly right above your bottom nav bar */
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none; /* Lets users click through it */
+}
+
+.toast {
+  background: #2a2a2a;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 25px;
+  font-size: 14px;
+  font-weight: bold;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+  text-align: center;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(20px);
+  /* Slides up, stays for 2.5s, then fades out */
+  animation: slideUpToast 0.3s forwards, fadeOutToast 0.3s forwards 2.5s;
+}
+
+.toast.success { border: 1px solid #2ecc71; }
+.toast.error { border: 1px solid #ff4757; }
+
+@keyframes slideUpToast {
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeOutToast {
+  to { opacity: 0; transform: translateY(-10px); }
+}
